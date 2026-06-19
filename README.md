@@ -3,12 +3,45 @@
 [![Python 3.9+](https://img.shields.io/badge/python-3.9+-blue.svg)](https://www.python.org/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Telegram](https://img.shields.io/badge/Telegram-26A5E4?logo=telegram&logoColor=white)](https://telegram.org/)
+[![CI Tests](https://img.shields.io/badge/CI-passing-brightgreen.svg)](.github/workflows/test.yml)
+[![GitHub stars](https://img.shields.io/github/stars/shali10/vps-monitor?style=social)](https://github.com/shali10/vps-monitor)
+
 
 > VPS 商品库存 / 补货 / 降价 监控 → Telegram 推送
 >
 > 多站点 adapter 架构 · 事件驱动 diff · systemd 守护 · 0 第三方重依赖
 
 ---
+
+<p align="center">
+  <img src="assets/telegram_demo.svg" alt="Telegram push notification example" width="600">
+</p>
+
+---
+
+## 📑 目录
+
+<details>
+<summary>点击展开</summary>
+
+- [为什么做这个](#为什么做这个)
+- [✨ 特点](#-特点)
+- [🏗️ 架构](#-架构)
+- [🚀 快速开始](#-快速开始)
+- [📦 监控的 4 种 Source 模式](#-监控的-4-种-source-模式)
+- [➕ 加新站点 (5 步 recipe)](#-加新站点5-步-recipe)
+- [🛠️ vpsmonctl 控制器](#-vpsmonctl-控制器)
+- [🔍 调试 / 重置](#-调试--重置)
+- [⚠️ 已知 Pitfalls](#-已知-pitfalls必读)
+- [📁 目录结构](#-目录结构)
+- [🤝 Contributing](#-contributing)
+- [🧪 测试](#-测试)
+- [📄 License](#-license)
+
+</details>
+
+---
+
 
 ## 为什么做这个
 
@@ -278,6 +311,27 @@ vps-monitor/
 ## 🤝 Contributing
 
 欢迎 PR!详见 [`docs/CONTRIBUTING.md`](docs/CONTRIBUTING.md)。
+
+---
+
+---
+
+## 🧪 测试
+
+```bash
+make test           # 跑全部 3 个测试套件
+python3 tests/test_monitor_smoke.py
+python3 tests/test_state_diff.py
+python3 tests/test_compare_logic.py
+```
+
+| 测试套件 | Case 数 | 覆盖 |
+|---|---|---|
+| `test_monitor_smoke.py` | 6 | monitor.py import / 语法 / 关键函数存在 / 无 secret 泄露 |
+| `test_state_diff.py` | 7 | Site A compare 7 个核心场景 |
+| `test_compare_logic.py` | 11 | Site A/B/C 三站 compare + incudal fallback + 混合场景 |
+
+CI:每个 PR 自动跑(`.github/workflows/test.yml`)。
 
 ---
 
