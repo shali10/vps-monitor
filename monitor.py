@@ -2,11 +2,14 @@
 """
 VPS 商品/库存监控 → Telegram 推送
 
-3 个独立 source,共用一个 TG bot:
+4 个独立 source,共用一个 TG bot:
 
-  Site A  (auth: Bearer)   间隔 A_INTERVAL 秒
-  Site B  (公开 API)        间隔 B_INTERVAL 秒
-  Site C  (公开 API)        间隔 C_INTERVAL 秒
+  Site A  独角鲸云 (auth: Bearer)       间隔 A_INTERVAL 秒
+  Site C  incudal   (公开 API + Bearer)  间隔 C_INTERVAL 秒
+  Site D  DediRock  (HTML 解析 + 活动标识) 间隔 D_INTERVAL 秒
+  Site E  czl.net   (公开 API, 池规则过滤)  间隔 E_INTERVAL 秒
+
+Site B (56idc) 已清理 (2026-06-20), 详见 README §10.5。
 
 每个 source 检测的"事件":
   - 新到货 (新出现的 id)
@@ -94,9 +97,6 @@ SITE_A_OPTIMIZED_EXCLUDE_KEYWORDS = [
 
 # ---- Site B (公开 API) ----
 # 示例: 树形结构 area > node > plan
-SITE_B_API_URL = _env_str("SITE_B_API_URL", "")
-SITE_B_POLL_INTERVAL = _env_int("SITE_B_POLL_INTERVAL", 90)
-SITE_B_DEPLOY_URL = _env_str("SITE_B_DEPLOY_URL", "")
 
 # ---- Site C (公开 API) ----
 # 示例: packages 数组, 每个 package 内嵌 plans 数组
@@ -186,7 +186,6 @@ def load_state():
             return json.load(f)
     return {
         "site_a": {"plans": {}, "first_run": True},
-        "site_b": {"plans": {}, "first_run": True},
         "site_c": {"packages": {}, "first_run": True},
         "site_d": {"products": {}, "first_run": True},
         "site_e": {"items": {}, "first_run": True},
@@ -936,6 +935,10 @@ def monitor_site_c(state):
         state["first_run"] = False
         log.info("site-c first run: loaded %d packages (no notify, auth=%s)", len(new_state), bool(SITE_C_TOKEN))
         return 0, 0, 0
+    # 2026-06-20 加总是 log (Pitfall 18 套路: 0 变化静默=难验证, 加 log 让主循环可见)
+    log.info("site-c: polled %d packages (new=%d, restock=%d, drop=%d, api=%s)",
+             len(new_state), len(new_arrivals), len(restocked_pkgs) + len(restocked_plans),
+             len(price_drops), SITE_C_API_URL)
     if new_arrivals:
         send_tg(notify_site_c_new(new_arrivals))
     restock_msg = notify_site_c_restock(restocked_pkgs, restocked_plans)
@@ -1167,7 +1170,7 @@ def _parse_usd_year_e(p):
         sym, val = "¥", float(m.group(1))
     else:
         sym, val = m.group(1), float(m.group(2))
-    fx = {"$": 1, "€": 1.08, "¥": 0.139, "￥": 0.139}
+    fx = {"$": 1, "€": 1.08, "¥": 0.147, "￥": 0.147}
     usd = val * fx.get(sym, 1)
     if "年" in p:
         return usd
@@ -1178,10 +1181,46 @@ def _parse_usd_year_e(p):
     return usd
 
 
+# 2026-06-20 user: xian shi ju ti lu xian (CN2/GIA/CMI/9929), bu yao "CN you xuan"
+CN_KEYWORDS = ["优化", "CN2", "GIA", "CMI", "9929", "4837", "精品", "三网", "BGP", "回国", "直连", "低延迟"]
+
+
+def _site_e_get_keywords(item):
+    """fan hui item ming zhong de CN_KEYWORDS list"""
+    text = " ".join([
+        str(item.get("title", "")),
+        str(item.get("location", "")),
+        str(item.get("remark", "")),
+    ])
+    return [kw for kw in CN_KEYWORDS if kw in text]
+
+
+# 2026-06-20 user: bai dan jia ge duan - yue fu 1-10 USD (12-120/nian) OR nian fu 1-70 USD (1-70/nian). OR -> 1<=usd_year<=120
+def _site_e_price_in_whitelist(item):
+    """2026-06-20 user: yue fu 1-10 USD/yue OR nian fu 1-70 USD/nian. Fen kai pan ding (bu zhe suan)."""
+    price_str = item.get("price", "")
+    m = re.search(r"([\d.]+)", price_str)
+    if not m: return False
+    val = float(m.group(1))
+    # 2026 hui lv: 1 USD = 6.8 CNY
+    if "€" in price_str: usd_val = val * 1.08
+    elif "¥" in price_str or "￥" in price_str: usd_val = val * 0.147
+    else: usd_val = val  # $ huo mo shu biao
+    # 2026-06-20 user: yue fu zi mian 1-10 (bu zhuan USD), nian fu yuan USD 1-70 (bao liu)
+    if "月" in price_str and 1 <= val <= 10: return True
+    if "年" in price_str and 1 <= usd_val <= 70: return True
+    return False
+
+
+# 2026-06-20 user: he bing 38 CSV + 172 DMIT = 210 id bai dan (yi ge)
+
+
+
 def _site_e_pool_match(ram_gb, usd_year):
-    if 0.4 <= ram_gb <= 1.1 and 0 < usd_year <= 9:
+    # 2026-06-20 user shou quan fang kuan: chi 1 shang xian 1.1->2.0GB, jia <=9-><=10; chi 2 xia xian 2->1GB
+    if 0.4 <= ram_gb <= 2.0 and 0 < usd_year <= 10:
         return "池1(廉价)"
-    if 2.0 <= ram_gb <= 16 and 10 <= usd_year <= 20:
+    if 1.0 <= ram_gb <= 16 and 10 <= usd_year <= 20:
         return "池2(主力)"
     return None
 
@@ -1265,8 +1304,16 @@ def fetch_site_e():
             continue
         ram = _parse_ram_gb_e(item.get("ram", ""))
         yu = _parse_usd_year_e(item.get("price", ""))
+        ram = _parse_ram_gb_e(item.get("ram", ""))
+        yu = _parse_usd_year_e(item.get("price", ""))
         pool_label = _site_e_pool_match(ram, yu)
-        if pool_label:
+        iid = item.get("id")
+        # 2026-06-20 user: bai dan id, biao qian xian shi ju ti ming zhong de lu xian
+        # 2026-06-20 user: zhi liu jia ge bai dan, id bai dan yi shan
+        if pool_label or _site_e_price_in_whitelist(item):
+            if not pool_label:
+                kws = _site_e_get_keywords(item)
+                pool_label = "线路:" + "/".join(kws) if kws else "价格"
             item["_pool"] = pool_label
             item["_ram_gb"] = ram
             item["_usd_year"] = yu
@@ -1346,39 +1393,91 @@ def _site_e_format_item(item, new_price_override=None, old_price_override=None):
         lines.append(f"  💰 ~~{old_price_override}~~ → <b>{price}</b>")
     else:
         lines.append(f"  💰 {price}")
+    # 2026-06-20 加: 标 isAvailable 状态, 让 user 一眼看出有货/没货
+    _is_avail = item.get("isAvailable", item.get("is_available", False))
+    _status = "✅ 有货" if _is_avail else "❌ 没货"
+    lines.append(f"  📊 状态: {_status}")
     lines.append(f'  <a href="{_html_attr(url)}">🛍️ 直达</a>')
     return "\n".join(lines)
 
 
 def notify_site_e_new(new_arrivals):
+    """分段推送新套餐, 每段 12 个, 调 send_tg 多次. 返 "" 已被分段发送. 2026-06-20 改."""
     if not new_arrivals:
         return ""
-    parts = [f"🆕 #vps-monitor #新套餐 ({len(new_arrivals)} 个)"]
-    for item in new_arrivals[:20]:
-        parts.append("\n" + _site_e_format_item(item))
-    if len(new_arrivals) > 20:
-        parts.append(f"\n... +{len(new_arrivals) - 20} 个")
-    return "\n".join(parts)
+    SEG = 12
+    total = len(new_arrivals)
+    if total <= SEG:
+        parts = [f"🆕 #vps-monitor #新套餐 ({total} 个)"]
+        for item in new_arrivals:
+            parts.append("\n" + _site_e_format_item(item))
+        send_tg("\n".join(parts))
+        return ""
+    # 多段: 第 1 段带总数, 后续段只标 (段 X/Y)
+    n_seg = (total + SEG - 1) // SEG
+    for seg_idx in range(n_seg):
+        seg = new_arrivals[seg_idx*SEG:(seg_idx+1)*SEG]
+        if seg_idx == 0:
+            header = f"🆕 #vps-monitor #新套餐 ({total} 个, 分 {n_seg} 段) [1/{n_seg}]"
+        else:
+            header = f"🆕 #vps-monitor #新套餐 (续) [{seg_idx+1}/{n_seg}]"
+        parts = [header]
+        for item in seg:
+            parts.append("\n" + _site_e_format_item(item))
+        send_tg("\n".join(parts))
+    return ""
 
 
 def notify_site_e_restock(restocked):
+    """分段推送补货, 每段 12 个. 2026-06-20 改."""
     if not restocked:
         return ""
-    parts = [f"🔔 #vps-monitor #补货 ({len(restocked)} 个)"]
-    for item in restocked[:20]:
-        parts.append("\n" + _site_e_format_item(item))
-    if len(restocked) > 20:
-        parts.append(f"\n... +{len(restocked) - 20} 个")
-    return "\n".join(parts)
+    SEG = 12
+    total = len(restocked)
+    if total <= SEG:
+        parts = [f"🔔 #vps-monitor #补货 ({total} 个)"]
+        for item in restocked:
+            parts.append("\n" + _site_e_format_item(item))
+        send_tg("\n".join(parts))
+        return ""
+    n_seg = (total + SEG - 1) // SEG
+    for seg_idx in range(n_seg):
+        seg = restocked[seg_idx*SEG:(seg_idx+1)*SEG]
+        if seg_idx == 0:
+            header = f"🔔 #vps-monitor #补货 ({total} 个, 分 {n_seg} 段) [1/{n_seg}]"
+        else:
+            header = f"🔔 #vps-monitor #补货 (续) [{seg_idx+1}/{n_seg}]"
+        parts = [header]
+        for item in seg:
+            parts.append("\n" + _site_e_format_item(item))
+        send_tg("\n".join(parts))
+    return ""
 
 
 def notify_site_e_price_drops(price_drops):
+    """分段推送降价, 每段 12 个. 2026-06-20 改."""
     if not price_drops:
         return ""
-    parts = [f"💰 #vps-monitor #降价 ({len(price_drops)} 个)"]
-    for d in price_drops[:20]:
-        parts.append("\n" + _site_e_format_item(d["item"], new_price_override=d["new_price"], old_price_override=d["old_price"]))
-    return "\n".join(parts)
+    SEG = 12
+    total = len(price_drops)
+    if total <= SEG:
+        parts = [f"💰 #vps-monitor #降价 ({total} 个)"]
+        for d in price_drops:
+            parts.append("\n" + _site_e_format_item(d["item"], new_price_override=d["new_price"], old_price_override=d["old_price"]))
+        send_tg("\n".join(parts))
+        return ""
+    n_seg = (total + SEG - 1) // SEG
+    for seg_idx in range(n_seg):
+        seg = price_drops[seg_idx*SEG:(seg_idx+1)*SEG]
+        if seg_idx == 0:
+            header = f"💰 #vps-monitor #降价 ({total} 个, 分 {n_seg} 段) [1/{n_seg}]"
+        else:
+            header = f"💰 #vps-monitor #降价 (续) [{seg_idx+1}/{n_seg}]"
+        parts = [header]
+        for d in seg:
+            parts.append("\n" + _site_e_format_item(d["item"], new_price_override=d["new_price"], old_price_override=d["old_price"]))
+        send_tg("\n".join(parts))
+    return ""
 
 
 def monitor_site_e(state):
@@ -1392,14 +1491,13 @@ def monitor_site_e(state):
         state["first_run"] = False
         log.info("site-e first run: loaded %d items (no notify)", len(new_state))
         return 0, 0, 0
+    # 2026-06-20 改: notify_*_e 函数内部已自调 send_tg 分段推送, 外层不再 send_tg
     if new_arrivals:
-        send_tg(notify_site_e_new(new_arrivals))
-    restock_msg = notify_site_e_restock(restocked)
-    if restock_msg:
-        send_tg(restock_msg)
-    drop_msg = notify_site_e_price_drops(price_drops)
-    if drop_msg:
-        send_tg(drop_msg)
+        notify_site_e_new(new_arrivals)
+    if restocked:
+        notify_site_e_restock(restocked)
+    if price_drops:
+        notify_site_e_price_drops(price_drops)
     return len(new_arrivals), len(restocked), len(price_drops)
 
 
@@ -1425,7 +1523,7 @@ def main():
     signal.signal(signal.SIGINT, stop)
     signal.signal(signal.SIGTERM, stop)
 
-    last_a = last_b = last_c = last_d = last_e = 0
+    last_a = last_c = last_d = last_e = 0
 
     while running:
         now = int(time.time())
@@ -1511,9 +1609,7 @@ if __name__ == "__main__":
         if args.site in ("a", "all") and SITE_A_TOKEN:
             n_new, n_restock = monitor_site_a(state["site_a"])
             print(f"site-a: {n_new} new, {n_restock} restocked")
-        if args.site in ("b", "all"):
-            n_new, n_restock = monitor_site_b(state["site_b"])
-            print(f"site-b: {n_new} new, {n_restock} restocked")
+        # 56idc disabled: site_b (2026-06-20 CLI 块也清掉, 避免引用未定义变量)
         if args.site in ("c", "all"):
             n_new, n_restock, n_drop = monitor_site_c(state["site_c"])
             print(f"site-c: {n_new} new, {n_restock} restock, {n_drop} drop")
