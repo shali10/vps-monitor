@@ -2,6 +2,20 @@
 
 所有版本变更记录。遵循 [Semantic Versioning](https://semver.org/)。
 
+## [3.3.0] - 2026-06-20
+
+### 🐛 Bug Fixes
+- **site_c 静默 5+ 小时**：service 启动后 site_c 块 0 变化静默，无法验证主循环真在跑。加 `总是 log` (Pitfall 18 套路，跟 site_d 一致)
+- **遗留监控源 CLI NameError**：`--once --site b` 调用未定义变量（其实是 site_a 的）。删 3 行 CLI 块
+- **monitor.py 头部 docstring 过期**：写 "3 个独立 source"（site_a/b/c），实际是 4 个（site_a/c/d/e）。已改
+
+### 📝 Documentation
+- **ONBOARDING.md 新增**：接入新站 SOP（项目一句话 / 关键词库 / 判定层 / 接入流程 / 已硬编码配置 / "你只需要说的" / Q&A / 代码位置）。README §8 引用此文件
+
+### ⚠️ 注意事项
+- **README.md 未变更**：OSS 公开版（badge + LICENSE + CI 描述）与 LXC 实战版（含内部数字）分开维护
+- 完整 release notes 见 GitHub: https://github.com/shali10/vps-monitor/releases/tag/v3.3.0
+
 ## [3.2.0] - 2026-06-20
 
 ### 新增
@@ -15,7 +29,7 @@
 - 📄 `.env.example` 加 `SITE_E_API_URL` / `SITE_E_POLL_INTERVAL` / `SITE_E_DEPLOY_URL`
 
 ### 部署
-- LXC `204.152.198.206:53635` (`/opt/vps-monitor/monitor.py`)
+- LXC 容器部署 (`/opt/vps-monitor/monitor.py`)
 - systemd: `vps-monitor.service` 自动 restart
 - 2 小时轮询间隔 (`SITE_E_POLL_INTERVAL=7200`)
 - TG 推送: 2 个 chat_id (user TG + QQ bot 转发)
