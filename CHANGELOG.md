@@ -2,9 +2,9 @@
 
 所有版本变更记录。遵循 [Semantic Versioning](https://semver.org/)。
 
-## [Unreleased]
+## [3.2.0] - 2026-06-20
 
-### 新增 (Planned v3.2.0)
+### 新增
 - 🚀 **Site E 适配器**: vps-monitor.czl.net 公开 API (`/api/public/filter`), 池规则 (池1 廉价 / 池2 主力), 58 条匹配
 - 🔧 **3 个 site-e 修复** (per user 2026-06-20):
   - USD 数字价格比较 + 1% 容忍 (避免币种换算/格式化噪音)
