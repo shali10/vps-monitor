@@ -23,6 +23,7 @@ import time
 import signal
 import logging
 import html
+from concurrent.futures import ThreadPoolExecutor, as_completed
 import requests
 from datetime import datetime
 from pathlib import Path
@@ -188,6 +189,7 @@ def load_state():
         "site_b": {"plans": {}, "first_run": True},
         "site_c": {"packages": {}, "first_run": True},
         "site_d": {"products": {}, "first_run": True},
+        "site_e": {"items": {}, "first_run": True},
         "last_poll": 0,
     }
 
@@ -1123,9 +1125,288 @@ def monitor_site_d(state):
     return len(restock), len(soldout), len(campaign_change)
 
 
+    return len(new_arrivals), len(restocked), len(price_drops)
+
+
+# ============================================================
+# Site E: VPS-Monitor.czl.net (2026-06-20 加)
+# 数据源: https://vps-monitor.czl.net/api/public/filter (公开 API)
+# 池规则:
+#   池 1 (廉价低规格): RAM 0.4-1.1GB, USD/年 ≤ 9
+#   池 2 (主力推荐):   RAM 2.0-16GB, USD/年 10-20
+#   排除: DEDI / 独立服务器 / 非 VPS
+#   不做三网优化过滤 (per user 2026-06-20)
+# ============================================================
+
+SITE_E_API_URL = _env_str("SITE_E_API_URL", "https://vps-monitor.czl.net/api/public/filter")
+SITE_E_POLL_INTERVAL = _env_int("SITE_E_POLL_INTERVAL", 7200)  # 默认 2 小时
+SITE_E_DEPLOY_URL = _env_str("SITE_E_DEPLOY_URL", "https://vps-monitor.czl.net/buy/{plan_id}")
+
+
+def _parse_ram_gb_e(s):
+    if not s:
+        return 0
+    m = re.search(r"([\d.]+)\s*(GB|G|MB|M)\b", s, re.I)
+    if not m:
+        return 0
+    v = float(m.group(1))
+    if m.group(2).upper() in ("M", "MB"):
+        v /= 1024
+    return v
+
+
+def _parse_usd_year_e(p):
+    if not p:
+        return 9999
+    p = p.strip()
+    m = re.search(r"([\$€¥￥])([\d.]+)", p)
+    if not m:
+        m = re.search(r"([\d.]+)\s*元", p)
+        if not m:
+            return 9999
+        sym, val = "¥", float(m.group(1))
+    else:
+        sym, val = m.group(1), float(m.group(2))
+    fx = {"$": 1, "€": 1.08, "¥": 0.139, "￥": 0.139}
+    usd = val * fx.get(sym, 1)
+    if "年" in p:
+        return usd
+    if "季" in p:
+        return usd * 4
+    if "月" in p:
+        return usd * 12
+    return usd
+
+
+def _site_e_pool_match(ram_gb, usd_year):
+    if 0.4 <= ram_gb <= 1.1 and 0 < usd_year <= 9:
+        return "池1(廉价)"
+    if 2.0 <= ram_gb <= 16 and 10 <= usd_year <= 20:
+        return "池2(主力)"
+    return None
+
+
+def _site_e_is_vps(item):
+    text = (item.get("title", "") + " " + item.get("disk", "")).lower()
+    return not any(b in text for b in ["dedicated", "dedi", "独立服", "独立服务器"])
+
+
+def _fetch_site_e_page(page):
+    """单页拉取, 返回 (page, dict or None). 异常返回 None, 不抛。"""
+    try:
+        r = requests.get(SITE_E_API_URL, params={"page": page, "pageSize": 12}, timeout=15)
+        r.raise_for_status()
+        return page, r.json()
+    except Exception as e:
+        log.warning("site-e fetch page %d failed: %s", page, e)
+        return page, None
+
+
+def fetch_site_e():
+    """并发拉 czl.net 公开 API, 按池规则过滤。
+    API 强制 12/page, 全 1054 条需 ~88 页。8 worker 并发 + 失败 retry, ~5s 完成。
+    任何一页失败先 retry 1 次, 还失败就丢该页(不影响其他页)。
+    """
+    if not SITE_E_API_URL:
+        log.debug("site-e skipped (SITE_E_API_URL not configured)")
+        return []
+    MAX_PAGES = 100  # 1200 条上限, 足够覆盖 ~1054 全量
+    WORKERS = 8  # czl.net 限速敏感, 10 worker 会触发 Connection reset
+    pages_failed = []
+
+    def _one_round(page_list):
+        """一轮并发拉取"""
+        out = {}
+        with ThreadPoolExecutor(max_workers=WORKERS) as ex:
+            futures = {ex.submit(_fetch_site_e_page, p): p for p in page_list}
+            for fut in as_completed(futures):
+                page, d = fut.result()
+                if d is not None:
+                    out[page] = d
+        return out
+
+    # Round 1: 全量并发
+    all_pages = list(range(1, MAX_PAGES + 1))
+    round1 = _one_round(all_pages)
+    # 找出失败的页
+    failed = [p for p in all_pages if p not in round1]
+    pages_failed.extend(failed)
+    # Round 2: 失败的页 retry 1 次 (sleep 1s 错峰)
+    if failed:
+        log.info("site-e: retrying %d failed pages after 1s...", len(failed))
+        time.sleep(1)
+        round2 = _one_round(failed)
+        # 合并
+        still_failed = [p for p in failed if p not in round2]
+        pages_failed = still_failed
+        round1.update(round2)
+    # 合并所有页的数据
+    all_items = []
+    for page in sorted(round1.keys()):
+        d = round1[page]
+        data = d.get("data", []) if isinstance(d, dict) else []
+        all_items.extend(data)
+    # 去重 (id 字段)
+    seen = set()
+    unique = []
+    for it in all_items:
+        iid = it.get("id")
+        if iid is None or iid in seen:
+            continue
+        seen.add(iid)
+        unique.append(it)
+    if pages_failed:
+        log.warning("site-e: %d pages failed after retry (e.g. %s), total fetched=%d unique=%d",
+                    len(pages_failed), pages_failed[:5], len(all_items), len(unique))
+    # 池规则过滤
+    pool_items = []
+    for item in unique:
+        if not _site_e_is_vps(item):
+            continue
+        ram = _parse_ram_gb_e(item.get("ram", ""))
+        yu = _parse_usd_year_e(item.get("price", ""))
+        pool_label = _site_e_pool_match(ram, yu)
+        if pool_label:
+            item["_pool"] = pool_label
+            item["_ram_gb"] = ram
+            item["_usd_year"] = yu
+            pool_items.append(item)
+    log.info("site-e: fetched %d unique items, %d match pool rules", len(unique), len(pool_items))
+    return pool_items
+
+
+def _site_e_id(item):
+    return str(item.get("id") or item.get("title") or "unknown")
+
+
+def _site_e_signature(item):
+    return {
+        "isAvailable": bool(item.get("isAvailable")),
+        "price": str(item.get("price", "")),
+        "clickCount": int(item.get("clickCount", 0) or 0),
+    }
+
+
+def compare_site_e(state, items):
+    old = state.get("items", {})
+    new_state = {}
+    new_arrivals = []
+    restocked = []
+    price_drops = []
+    cur_ids = {_site_e_id(i) for i in items}
+    for iid in cur_ids - set(old.keys()):
+        for it in items:
+            if _site_e_id(it) == iid:
+                new_arrivals.append(it)
+                break
+    for it in items:
+        iid = _site_e_id(it)
+        sig = _site_e_signature(it)
+        new_state[iid] = sig
+        if iid not in old:
+            continue
+        prev = old[iid]
+        if not prev.get("isAvailable") and sig["isAvailable"]:
+            restocked.append(it)
+        # 价格比较: 用 USD 数字 (容忍 1% 抖动, 避免币种换算/格式化噪音触发误报)
+        prev_price_raw = prev.get("price", "")
+        cur_price_raw = sig.get("price", "")
+        if prev_price_raw and cur_price_raw and prev_price_raw != cur_price_raw:
+            try:
+                prev_yu = _parse_usd_year_e(prev_price_raw)
+                cur_yu = _parse_usd_year_e(cur_price_raw)
+                # 仅当 USD 数字真下降 ≥1% 才算降价 (避免字符串变化但实际价格未变)
+                if 0 < prev_yu < 9999 and 0 < cur_yu < 9999 and cur_yu < prev_yu * 0.99:
+                    price_drops.append({"item": it, "old_price": prev_price_raw, "new_price": cur_price_raw})
+            except Exception:
+                pass
+    return new_arrivals, restocked, price_drops, new_state
+
+
+def _site_e_format_item(item, new_price_override=None, old_price_override=None):
+    pool = item.get("_pool", "?")
+    provider = _html_escape(item.get("provider", "?"))
+    title = _html_escape(item.get("title", "?"))
+    cpu = _html_escape(item.get("cpu", "?"))
+    ram = _html_escape(item.get("ram", "?"))
+    disk = _html_escape(item.get("disk", "?"))
+    bandwidth = _html_escape(item.get("bandwidth", "?"))
+    location = _html_escape(item.get("location", ""))
+    price = new_price_override if new_price_override else _html_escape(item.get("price", "?"))
+    iid = _site_e_id(item)
+    url = SITE_E_DEPLOY_URL.format(plan_id=iid)
+    lines = [
+        f"• <b>{title}</b>",
+        f"  🏷️ {provider} · {pool}",
+        f"  📦 {cpu} / {ram} / {disk} / {bandwidth}",
+    ]
+    if location:
+        lines.append(f"  📍 {location}")
+    if old_price_override:
+        lines.append(f"  💰 ~~{old_price_override}~~ → <b>{price}</b>")
+    else:
+        lines.append(f"  💰 {price}")
+    lines.append(f'  <a href="{_html_attr(url)}">🛍️ 直达</a>')
+    return "\n".join(lines)
+
+
+def notify_site_e_new(new_arrivals):
+    if not new_arrivals:
+        return ""
+    parts = [f"🆕 #vps-monitor #新套餐 ({len(new_arrivals)} 个)"]
+    for item in new_arrivals[:20]:
+        parts.append("\n" + _site_e_format_item(item))
+    if len(new_arrivals) > 20:
+        parts.append(f"\n... +{len(new_arrivals) - 20} 个")
+    return "\n".join(parts)
+
+
+def notify_site_e_restock(restocked):
+    if not restocked:
+        return ""
+    parts = [f"🔔 #vps-monitor #补货 ({len(restocked)} 个)"]
+    for item in restocked[:20]:
+        parts.append("\n" + _site_e_format_item(item))
+    if len(restocked) > 20:
+        parts.append(f"\n... +{len(restocked) - 20} 个")
+    return "\n".join(parts)
+
+
+def notify_site_e_price_drops(price_drops):
+    if not price_drops:
+        return ""
+    parts = [f"💰 #vps-monitor #降价 ({len(price_drops)} 个)"]
+    for d in price_drops[:20]:
+        parts.append("\n" + _site_e_format_item(d["item"], new_price_override=d["new_price"], old_price_override=d["old_price"]))
+    return "\n".join(parts)
+
+
+def monitor_site_e(state):
+    items = fetch_site_e()
+    if not items:
+        log.info("site-e polled 0 items (pool filtered or API empty)")
+        return 0, 0, 0
+    new_arrivals, restocked, price_drops, new_state = compare_site_e(state, items)
+    state["items"] = new_state
+    if state.get("first_run", True):
+        state["first_run"] = False
+        log.info("site-e first run: loaded %d items (no notify)", len(new_state))
+        return 0, 0, 0
+    if new_arrivals:
+        send_tg(notify_site_e_new(new_arrivals))
+    restock_msg = notify_site_e_restock(restocked)
+    if restock_msg:
+        send_tg(restock_msg)
+    drop_msg = notify_site_e_price_drops(price_drops)
+    if drop_msg:
+        send_tg(drop_msg)
+    return len(new_arrivals), len(restocked), len(price_drops)
+
+
 # ============================================================
 # Main loop
 # ============================================================
+
 
 def main():
     log.info("vps-monitor starting")
@@ -1144,7 +1425,7 @@ def main():
     signal.signal(signal.SIGINT, stop)
     signal.signal(signal.SIGTERM, stop)
 
-    last_a = last_b = last_c = last_d = 0
+    last_a = last_b = last_c = last_d = last_e = 0
 
     while running:
         now = int(time.time())
@@ -1189,6 +1470,17 @@ def main():
             log.exception("site-c poll failed: %s", e)
 
         try:
+            # Site E (czl.net 公开 API, RAM 字段过滤)
+            if now - last_e >= SITE_E_POLL_INTERVAL:
+                last_e = now
+                n_new, n_restock, n_drop = monitor_site_e(state["site_e"])
+                if n_new or n_restock or n_drop:
+                    log.info("site-e: %d new, %d restock, %d drop",
+                             n_new, n_restock, n_drop)
+        except Exception as e:
+            log.exception("site-e poll failed: %s", e)
+
+        try:
             state["last_poll"] = now
             save_state(state)
         except Exception as e:
@@ -1211,7 +1503,7 @@ import argparse
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--once", action="store_true", help="只跑一次 poll 然后退出")
-    parser.add_argument("--site", choices=["a", "b", "c", "d", "all"], default="all",
+    parser.add_argument("--site", choices=["a", "b", "c", "d", "e", "all"], default="all",
                         help="--once 时只跑某个 source")
     args = parser.parse_args()
     if args.once:
@@ -1228,6 +1520,9 @@ if __name__ == "__main__":
         if args.site in ("d", "all"):
             n_restock, n_soldout, n_campaign = monitor_site_d(state["site_d"])
             print(f"site-d: {n_restock} restock, {n_soldout} soldout, {n_campaign} campaign")
+        if args.site in ("e", "all"):
+            n_new, n_restock, n_drop = monitor_site_e(state["site_e"])
+            print(f"site-e: {n_new} new, {n_restock} restock, {n_drop} drop")
         save_state(state)
     else:
         main()
