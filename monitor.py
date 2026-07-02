@@ -590,7 +590,7 @@ def _parse_usd_year_e(p):
         sym, val = "¥", float(m.group(1))
     else:
         sym, val = m.group(1), float(m.group(2))
-    fx = {"$": 1, "€": 1.08, "¥": 0.147, "￥": 0.147}
+    fx = {"$": 1, "€": 1.08, "¥": 0.139, "￥": 0.139}
     usd = val * fx.get(sym, 1)
     if "年" in p:
         return usd
@@ -637,8 +637,8 @@ def _site_e_price_in_whitelist(item):
 
 
 def _site_e_pool_match(ram_gb, usd_year):
-    # 2026-06-20 user shou quan fang kuan: chi 1 shang xian 1.1->2.0GB, jia <=9-><=10; chi 2 xia xian 2->1GB
-    if 0.4 <= ram_gb <= 2.0 and 0 < usd_year <= 10:
+    # 池1: 廉价低规格 (RAM 0.4-1.0 + ≤$10/年); 池2: 主力 (RAM 1.0-16 + $10-20/年)
+    if 0.4 <= ram_gb <= 1.0 and 0 < usd_year <= 10:
         return "池1(廉价)"
     if 1.0 <= ram_gb <= 16 and 10 <= usd_year <= 20:
         return "池2(主力)"
