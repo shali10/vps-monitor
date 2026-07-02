@@ -17,9 +17,7 @@
 适用: 任何 vps-monitor 用户的"推一下当前 3 家库存"需求
 """
 import argparse
-import json
 import re
-import sys
 from datetime import datetime
 from pathlib import Path
 
@@ -226,7 +224,7 @@ def main():
         parts.append("\n🐳 <b>独角鲸云</b>: 抓取失败")
 
     if n_pkgs > 0:
-        parts.append(f"\n💎 <b>Incudal</b>")
+        parts.append("\n💎 <b>Incudal</b>")
         parts.append(f"  • {n_pkgs} packages")
         for pkg in site_c.get("packages", [])[:5]:
             name = pkg.get("name") or pkg.get("title") or pkg.get("id", "?")
@@ -249,7 +247,7 @@ def main():
         return
 
     # 推送
-    print(f"\n=== 推送 ===", flush=True)
+    print("\n=== 推送 ===", flush=True)
     push_tg(env, text)
 
 
