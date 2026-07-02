@@ -1,71 +1,84 @@
 #!/usr/bin/env python3
-"""Smoke tests for monitor.py — syntax + import + basic structure."""
+"""Smoke tests for monitor.py — syntax + import + basic structure.
 
+Refactored to use runtime introspection (import monitor → hasattr).
+Previous version scanned source text, which broke when monitor.py became
+a re-export shim over core/ + sites/.
+"""
 import ast
-import sys
+import importlib.util
 import subprocess
+import sys
 from pathlib import Path
 
 MONITOR_PY = Path(__file__).parent.parent / "monitor.py"
+MAIN_PY = Path(__file__).parent.parent / "main.py"
+
+# Load monitor as module (triggers import chain)
+# Load monitor as module (triggers import chain)
+_spec = importlib.util.spec_from_file_location("monitor", MONITOR_PY)
+assert _spec is not None, f"cannot load spec from {MONITOR_PY}"
+monitor = importlib.util.module_from_spec(_spec)
+assert _spec.loader is not None
+_spec.loader.exec_module(monitor)
 
 
 def test_syntax_ok():
-    """monitor.py 必须语法 OK。"""
+    """monitor.py must parse."""
     src = MONITOR_PY.read_text(encoding="utf-8")
-    try:
-        ast.parse(src, filename=str(MONITOR_PY))
-    except SyntaxError as e:
-        pytest.fail(f"monitor.py syntax error: {e}")
+    ast.parse(src, filename=str(MONITOR_PY))
 
 
 def test_py_compile():
-    """python3 -m py_compile 必须通过(系统级检查)。"""
+    """py_compile must pass."""
     r = subprocess.run(
-        ["python3", "-m", "py_compile", str(MONITOR_PY)],
-        capture_output=True, text=True, timeout=30)
+        [sys.executable, "-m", "py_compile", str(MONITOR_PY)],
+        capture_output=True, text=True, timeout=30,
+    )
     assert r.returncode == 0, f"py_compile failed: {r.stderr}"
 
 
 def test_required_functions_exist():
-    """关键函数必须存在(per-site adapter 模式铁律)。"""
-    src = MONITOR_PY.read_text(encoding="utf-8")
-    # 至少要有 Site A 的 4 个函数
+    """Key site-a adapter functions must be exposed by monitor module."""
     for fn in ["fetch_site_a", "compare_site_a",
                "notify_site_a_restocked", "monitor_site_a"]:
-        assert f"def {fn}" in src, f"missing function: {fn}"
+        assert hasattr(monitor, fn), f"missing function: {fn}"
+
+
+def test_required_site_e_functions_exist():
+    """Key site-e adapter functions must be exposed by monitor module."""
+    for fn in ["fetch_site_e", "compare_site_e", "monitor_site_e",
+               "_site_e_pool_match", "_parse_usd_year_e", "_parse_ram_gb_e",
+               "_site_e_is_vps"]:
+        assert hasattr(monitor, fn), f"missing function: {fn}"
 
 
 def test_required_constants_exist():
-    """关键常量必须存在(系统级配置)。"""
-    src = MONITOR_PY.read_text(encoding="utf-8")
-    for const in ['SITE_A_API_URL', 'TELEGRAM_BOT_TOKEN', 'POLL_INTERVAL']:
-        assert const in src, f"missing constant: {const}"
+    """Key constants must be exposed by monitor module."""
+    for const in ["SITE_A_API_URL", "TELEGRAM_BOT_TOKEN", "POLL_INTERVAL",
+                  "SITE_E_API_URL", "SITE_A_TOKEN"]:
+        assert hasattr(monitor, const), f"missing constant: {const}"
 
 
 def test_no_secrets_in_source():
-    """源码不应包含真实 token / chat_id(仅占位符 OK)。"""
-    src = MONITOR_PY.read_text(encoding="utf-8")
-    # 占位符 OK,但真实 JWT (eyJ 开头 + 长度 > 100) 不应在源码
+    """Source must not contain real tokens."""
     import re
+    src = MONITOR_PY.read_text(encoding="utf-8")
     real_jwts = re.findall(r"eyJ[A-Za-z0-9_-]{50,}", src)
-    assert len(real_jwts) == 0, f"疑似真实 JWT 泄露: {real_jwts[:1]}"
+    assert len(real_jwts) == 0, f"possible JWT leak: {real_jwts[:1]}"
 
 
 def test_main_loop_has_per_site_try():
-    """主循环必须有 per-site try/except(防 Pitfall 17 阻塞)。"""
-    src = MONITOR_PY.read_text(encoding="utf-8")
-    # 检查 try/except 在 main 循环里出现多次(每个 site 一次)
+    """main.py main loop must have per-site try/exception isolation."""
+    src = MAIN_PY.read_text(encoding="utf-8")
     try_count = src.count("    try:") + src.count("\ttry:")
-    assert try_count >= 2, f"per-site try 太少: {try_count},可能回退到共享 try"
+    assert try_count >= 2, f"per-site try count too low: {try_count}"
 
 
-# pytest 不一定有,这里 inline 跑
-import traceback
-
-def _run():
+if __name__ == "__main__":
     tests = [test_syntax_ok, test_py_compile, test_required_functions_exist,
-             test_required_constants_exist, test_no_secrets_in_source,
-             test_main_loop_has_per_site_try]
+             test_required_site_e_functions_exist, test_required_constants_exist,
+             test_no_secrets_in_source, test_main_loop_has_per_site_try]
     failed = []
     for t in tests:
         name = t.__name__
@@ -78,9 +91,4 @@ def _run():
     if failed:
         print(f"\n{len(failed)}/{len(tests)} FAILED")
         sys.exit(1)
-    else:
-        print(f"\n{len(tests)}/{len(tests)} PASSED")
-
-
-if __name__ == "__main__":
-    _run()
+    print(f"\nAll {len(tests)} smoke tests passed.")

@@ -36,8 +36,9 @@ dist/
 venv/
 
 # ============================================
-# Temp
+# Temp & local state
 # ============================================
 *.tmp
 .coverage
 .pytest_cache/
+.local/

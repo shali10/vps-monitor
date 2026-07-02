@@ -4,8 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "vps-monitor"
-version = "3.0.0"
-description = "VPS hosting stock/restock monitor with Telegram push (multi-site adapter, event-driven diff, systemd)"
+version = "3.4.0"
+description = "VPS hosting stock/restock monitor with Telegram push (modular multi-site adapter, event-driven diff, systemd)"
 readme = "README.md"
 license = {file = "LICENSE"}
 authors = [
@@ -36,6 +36,7 @@ dev = [
 ]
 
 [project.scripts]
+vps-monitor = "main:main"
 vpsmonctl = "vpsmonctl:main"
 
 [project.urls]
@@ -44,7 +45,8 @@ Issues = "https://github.com/shali10/vps-monitor/issues"
 Changelog = "https://github.com/shali10/vps-monitor/blob/main/CHANGELOG.md"
 
 [tool.setuptools]
-py-modules = ["monitor", "vpsmonctl"]
+packages = ["core", "sites"]
+py-modules = ["monitor", "vpsmonctl", "config", "main"]
 
 [tool.setuptools.package-data]
 "" = ["*.md", "*.txt", "*.service"]

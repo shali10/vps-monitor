@@ -11,8 +11,8 @@ site-e 是 czl.net 公开 API 适配器 (commit 35ffe16), 核心逻辑:
 跑测试: python3 tests/test_site_e.py
 """
 
-import sys
 import importlib.util
+import sys
 from pathlib import Path
 
 # Load monitor.py as module (避免污染 sys.path / 副作用)

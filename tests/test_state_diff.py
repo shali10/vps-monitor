@@ -9,9 +9,7 @@ state.json 是 baseline 对比层,核心测试场景:
 """
 
 import sys
-import json
-import tempfile
-from pathlib import Path
+
 
 # Inline 简化版 compare_site_a 的核心逻辑(便于单元测)
 def compare_site_a_simple(state, items):
@@ -112,6 +110,7 @@ def test_mixed_scenario():
 
 
 import traceback
+
 
 def _run():
     tests = [
