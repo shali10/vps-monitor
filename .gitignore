@@ -5,4 +5,13 @@ state/
 *.sqlite3
 .env
 .env.*
+!.env.example
 *.log
+config.json
+config.production.json
+config.local.json
+htmlcov/
+.coverage
+dist/
+build/
+*.egg-info/

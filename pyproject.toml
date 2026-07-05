@@ -1,0 +1,40 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "vps-monitor"
+version = "4.1.0"
+description = "Event-driven VPS stock monitor with Telegram notifications."
+readme = "README.md"
+requires-python = ">=3.10"
+license = {text = "MIT"}
+authors = [{name = "shali10"}]
+keywords = ["vps", "monitor", "stock", "telegram", "systemd"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: System Administrators",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: System :: Monitoring",
+]
+dependencies = [
+    "requests>=2.31.0",
+]
+
+[project.scripts]
+vpsmon-v4 = "vpsmon.cli:main"
+
+[project.urls]
+Homepage = "https://github.com/shali10/vps-monitor"
+Issues = "https://github.com/shali10/vps-monitor/issues"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+
+[tool.setuptools.packages.find]
+include = ["vpsmon*"]
