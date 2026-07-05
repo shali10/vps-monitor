@@ -2,6 +2,24 @@
 
 All notable changes to this project are documented here.
 
+## v4.2.0 - 2026-07-06
+
+### Added
+
+- Added project badges, table of contents, source matrix, and OSS maturity scorecard to README.
+- Added `Makefile` with install, syntax, test, check, dry-run, and clean commands.
+- Added `SECURITY.md` with supported versions, reporting guidance, and sensitive-data boundaries.
+- Added GitHub Issue templates for bug reports and feature requests.
+- Added Dependabot configuration for pip and GitHub Actions.
+- Added per-source documentation under `docs/sites/` for `czl` and `dujiaojing`.
+- Added examples: `examples/minimal-czl.json` and `examples/offer.example.json`.
+
+### Changed
+
+- Bumped package version to `4.2.0`.
+- Expanded README from a working public README into a more complete OSS project homepage.
+- Tightened public placeholder examples so they do not resemble real tokens.
+
 ## v4.1.0 - 2026-07-06
 
 ### Added

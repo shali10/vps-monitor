@@ -1,0 +1,18 @@
+{
+  "source": "czl",
+  "external_id": "example-1",
+  "name": "Example 1GB KVM VPS",
+  "provider": "ExampleProvider",
+  "region": "US - Los Angeles",
+  "cpu_cores": 1,
+  "ram_gb": 1,
+  "disk": "20GB SSD",
+  "traffic": "1TB",
+  "price": {
+    "usd_year": 9.99,
+    "raw": "$9.99/年"
+  },
+  "available": true,
+  "stock": 1,
+  "url": "https://example.invalid/buy/example-1"
+}
