@@ -1,44 +1,8 @@
-# ============================================
-# Secrets & runtime state (DO NOT COMMIT)
-# ============================================
-.env
-.env.bak.*
-state.json
-state.json.bak.*
-monitor.log
-*.log
-
-# ============================================
-# Local backups (kept in ARCHIVE/, not in git)
-# ============================================
-*.bak.*
-*.pre-*
-ARCHIVE_*/
-ARCHIVE/
 __pycache__/
-*.pyc
-
-# ============================================
-# OS / editor
-# ============================================
-.DS_Store
-*.swp
-.vscode/
-.idea/
-
-# ============================================
-# Python
-# ============================================
-*.egg-info/
-build/
-dist/
-.venv/
-venv/
-
-# ============================================
-# Temp & local state
-# ============================================
-*.tmp
-.coverage
+*.py[cod]
 .pytest_cache/
-.local/
+state/
+*.sqlite3
+.env
+.env.*
+*.log

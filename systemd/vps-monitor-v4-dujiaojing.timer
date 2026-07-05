@@ -1,0 +1,11 @@
+[Unit]
+Description=Run VPS Monitor v4 dujiaojing poll every 3 minutes
+
+[Timer]
+OnBootSec=90s
+OnUnitActiveSec=3min
+AccuracySec=10s
+Unit=vps-monitor-v4-dujiaojing.service
+
+[Install]
+WantedBy=timers.target

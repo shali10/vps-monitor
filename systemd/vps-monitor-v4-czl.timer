@@ -1,0 +1,11 @@
+[Unit]
+Description=Run VPS Monitor v4 czl poll every 2 hours
+
+[Timer]
+OnBootSec=3min
+OnUnitActiveSec=2h
+AccuracySec=1min
+Unit=vps-monitor-v4-czl.service
+
+[Install]
+WantedBy=timers.target
