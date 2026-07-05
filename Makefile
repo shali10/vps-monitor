@@ -24,7 +24,7 @@ test:
 
 check: syntax test
 	@! git ls-files | grep -E '(^|/)(\.env$$|config\.json$$|config\.production\.json$$|.*\.sqlite3$$|.*\.log$$)'
-	@! git grep -nE 'ghp_|github_pat_|[0-9]{6,}:[A-Za-z0-9_-]{20,}' -- . ':!docs/RELEASE_CHECKLIST.md'
+	@! git grep -nE 'ghp_|github_pat_|[0-9]{6,}:[A-Za-z0-9_-]{20,}' -- . ':!Makefile' ':!docs/RELEASE_CHECKLIST.md'
 
 dry-run-czl:
 	$(PYTHON) -m vpsmon.cli --config $(CONFIG) --source czl --notify-first-run --dry-run

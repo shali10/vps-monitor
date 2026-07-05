@@ -219,7 +219,7 @@ python3 -m vpsmon.cli --config config.example.json --source czl --notify-first-r
 
 ## 版本
 
-当前版本：`v4.2.0`。
+当前版本：`v4.2.1`。
 
 更新记录见 [CHANGELOG.md](CHANGELOG.md)。
 

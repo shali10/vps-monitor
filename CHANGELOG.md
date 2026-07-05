@@ -2,6 +2,12 @@
 
 All notable changes to this project are documented here.
 
+## v4.2.1 - 2026-07-06
+
+### Fixed
+
+- Fixed `make check` secret-shape scan so it excludes the Makefile rule itself while still scanning project content.
+
 ## v4.2.0 - 2026-07-06
 
 ### Added
