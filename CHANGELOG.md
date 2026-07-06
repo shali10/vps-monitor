@@ -2,6 +2,19 @@
 
 这个文件记录项目的重要变更。
 
+## v4.5.0 - 2026-07-06
+
+### Added
+
+- 新增 `docs/ADDING_SOURCES.md`，把 v3 单体脚本沉淀的来源接入经验改写为 v4 source adapter 指南。
+- 文档覆盖公开 JSON API、Bearer API、资源模板 API、HTML 商品页、fixture 测试、规则配置和 PR 检查表。
+
+### Changed
+
+- README 新增来源接入入口，并将文档成熟度调整为 `A+`。
+- 贡献指南的新来源要求指向 `docs/ADDING_SOURCES.md`。
+- 版本升到 `4.5.0`。
+
 ## v4.4.1 - 2026-07-06
 
 ### Changed

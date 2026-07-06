@@ -29,7 +29,7 @@ python3 -m pytest -q
 | Source adapter | 放在 `vpsmon/sources/<name>.py` |
 | 标准模型 | 输出 `Offer`，不要绕过模型直接发消息 |
 | 配置 | 更新 `config.example.json` |
-| 文档 | 更新 `docs/CONFIGURATION.md` 或新增来源说明 |
+| 文档 | 更新 `docs/ADDING_SOURCES.md`、`docs/CONFIGURATION.md`，或新增来源说明 |
 | 测试 | 至少覆盖 normalize 和消息格式 |
 
 ## 风格约定

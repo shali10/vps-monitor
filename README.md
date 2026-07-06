@@ -23,6 +23,7 @@
 | [运行模型](#运行模型) | 架构流程 |
 | [systemd 部署](#systemd-部署) | 生产部署 |
 | [内置来源](#内置来源) | czl / 独角鲸云说明 |
+| [新增来源](#新增来源) | source adapter 接入流程 |
 | [项目成熟度](#项目成熟度) | OSS 就绪度 |
 | [安全边界](#安全边界) | token 和状态文件处理 |
 
@@ -186,14 +187,14 @@ sudo systemctl enable --now vps-monitor-v4-czl.timer vps-monitor-v4-dujiaojing.t
 | 5 | 给解析、筛选、格式化补测试 |
 | 6 | 在 `docs/sites/` 补来源文档 |
 
-具体说明见 [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)。
+具体说明见 [docs/ADDING_SOURCES.md](docs/ADDING_SOURCES.md)，架构细节见 [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)。
 
 ## 项目成熟度
 
 | 维度 | 当前状态 | 说明 |
 |---|---|---|
 | 代码结构 | A | package 化、source adapter、SQLite 状态、统一 formatter |
-| 文档 | A | README、安装、配置、架构、排错、站点文档齐全 |
+| 文档 | A+ | README、安装、配置、架构、排错、来源接入指南、站点文档齐全 |
 | 测试 | A | 解析/格式化/发送路径、SQLite diff 生命周期、事件落库、池规则、脱敏 API fixture 驱动的 source fetch 均有覆盖 |
 | CI/CD | A- | GitHub Actions、Dependabot 已接入 |
 | OSS 规范 | A | LICENSE、CHANGELOG、SECURITY、Issue 模板、Release checklist |
@@ -221,7 +222,7 @@ python3 -m vpsmon.cli --config config.example.json --source czl --notify-first-r
 
 ## 版本
 
-当前版本：`v4.4.1`。
+当前版本：`v4.5.0`。
 
 更新记录见 [CHANGELOG.md](CHANGELOG.md)。
 
