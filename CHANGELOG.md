@@ -2,6 +2,19 @@
 
 All notable changes to this project are documented here.
 
+## v4.4.0 - 2026-07-06
+
+### Added
+
+- Added sanitized API response fixtures for `czl` and `dujiaojing` under `tests/fixtures/`.
+- Added source-level fetch tests that exercise pagination, request parameters, auth headers, normalization, stock states, traffic formatting, and deploy URL rendering without external network access.
+- Added missing-token coverage for the authenticated `dujiaojing` source.
+
+### Changed
+
+- Updated README maturity scorecard to reflect fixture-backed source adapter coverage.
+- Bumped package version to `4.4.0`.
+
 ## v4.3.0 - 2026-07-06
 
 ### Added

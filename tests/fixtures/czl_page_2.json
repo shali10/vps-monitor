@@ -1,0 +1,19 @@
+{
+  "data": {
+    "items": [
+      {
+        "id": "czl-fixture-3",
+        "title": "2GB KVM VPS - Tokyo CMI",
+        "provider": "TokyoExample",
+        "location": "Japan - Tokyo",
+        "cpu": "2vCore",
+        "ram": "2048MB RAM",
+        "disk": "30GB NVMe",
+        "bandwidth": "2TB",
+        "remark": "CMI / 三网优化",
+        "price": "$18/年",
+        "remaining": 1
+      }
+    ]
+  }
+}

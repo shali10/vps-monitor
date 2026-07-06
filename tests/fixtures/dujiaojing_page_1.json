@@ -1,0 +1,42 @@
+{
+  "code": 0,
+  "data": {
+    "total": 3,
+    "plans": [
+      {
+        "id": 101,
+        "name": "HK Tiny",
+        "machine_name": "HK CN2-GIA Node",
+        "machine_region": "HK",
+        "machine_region_id": "hk",
+        "machine_id": "hk-1",
+        "machine_description": "三网 CN2 GIA 低延迟",
+        "machine_vm_type": "KVM",
+        "machine_tags": ["CMI"],
+        "cpu": 1,
+        "ram_mb": 512,
+        "disk_gb": 8,
+        "bandwidth_mbps": 100,
+        "monthly_traffic_gb": 500,
+        "price_monthly": 0.08,
+        "remaining": 2
+      },
+      {
+        "id": 102,
+        "name": "SG Sold Out",
+        "machine_name": "SG BGP Node",
+        "machine_region": "SG",
+        "machine_region_id": "sg",
+        "machine_id": "sg-1",
+        "machine_description": "BGP",
+        "cpu": 1,
+        "ram_mb": 1024,
+        "disk_gb": 10,
+        "bandwidth_mbps": 200,
+        "monthly_traffic_gb": 0,
+        "price_cents": 25,
+        "remaining": 0
+      }
+    ]
+  }
+}

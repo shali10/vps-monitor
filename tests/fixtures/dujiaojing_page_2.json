@@ -1,0 +1,24 @@
+{
+  "code": 0,
+  "data": {
+    "total": 3,
+    "plans": [
+      {
+        "id": 103,
+        "name": "US Native",
+        "machine_name": "US Native IP Node",
+        "machine_region": "US",
+        "machine_region_id": "us",
+        "machine_id": "us-1",
+        "machine_description": "原生IP 大流量",
+        "cpu": "2",
+        "ram_mb": "2048",
+        "disk_gb": "20",
+        "bandwidth_mbps": "1000",
+        "monthly_traffic_gb": "1024",
+        "price_monthly": "0.2",
+        "remaining": "5"
+      }
+    ]
+  }
+}

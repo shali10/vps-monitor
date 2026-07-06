@@ -1,3 +1,6 @@
+import json
+from pathlib import Path
+
 from vpsmon.cli import run_once
 from vpsmon.engine.diff import diff_offers
 from vpsmon.models import Event, EventType, Money, VpsOffer
@@ -5,9 +8,16 @@ from vpsmon.notifiers import telegram
 from vpsmon.notifiers.telegram import format_offer, render_events, render_summary, send_telegram_messages, split_blocks
 from vpsmon.rules.filtering import offer_allowed
 from vpsmon.rules.parsing import parse_cpu_cores, parse_ram_gb, parse_usd_year
-from vpsmon.sources.czl import normalize as normalize_czl
-from vpsmon.sources.dujiaojing import normalize as normalize_dujiaojing
+from vpsmon.sources import czl, dujiaojing
+from vpsmon.sources.czl import CzlSource, normalize as normalize_czl
+from vpsmon.sources.dujiaojing import DujiaojingSource, normalize as normalize_dujiaojing
 from vpsmon.storage.sqlite import StateStore
+
+FIXTURES = Path(__file__).parent / "fixtures"
+
+
+def load_fixture(name):
+    return json.loads((FIXTURES / name).read_text())
 
 
 def test_parse_ram_units():
@@ -282,6 +292,110 @@ def test_filter_pools_match_low_price_and_reject_missing_specs():
     no_cpu = _offer()
     no_cpu = VpsOffer(**{**no_cpu.__dict__, "cpu_cores": None})
     assert not offer_allowed(no_cpu, rules)
+
+
+def test_czl_source_fetches_paginated_fixture(monkeypatch):
+    calls = []
+
+    class FakeResp:
+        def __init__(self, payload):
+            self.payload = payload
+
+        def raise_for_status(self):
+            return None
+
+        def json(self):
+            return self.payload
+
+    def fake_get(url, params, timeout):
+        calls.append((url, params, timeout))
+        page = params["page"]
+        if page == 1:
+            return FakeResp(load_fixture("czl_page_1.json"))
+        if page == 2:
+            return FakeResp(load_fixture("czl_page_2.json"))
+        return FakeResp({"data": {"items": []}})
+
+    monkeypatch.setattr(czl.requests, "get", fake_get)
+    source = CzlSource(
+        {
+            "api_url": "https://example.test/czl",
+            "page_size": 2,
+            "max_pages": 2,
+            "max_workers": 1,
+            "deploy_url": "https://example.test/buy/{item_id}",
+        }
+    )
+    offers = source.fetch()
+
+    assert [offer.offer_id for offer in offers] == ["czl-fixture-1", "czl-fixture-2", "czl-fixture-3"]
+    assert calls == [
+        ("https://example.test/czl", {"page": 1, "pageSize": 2}, 15),
+        ("https://example.test/czl", {"page": 2, "pageSize": 2}, 15),
+    ]
+    assert offers[0].url == "https://example.test/buy/czl-fixture-1"
+    assert offers[0].stock == 3
+    assert offers[0].available is True
+    assert offers[1].available is False
+    assert offers[2].ram_gb == 2
+    assert "CMI" in offers[2].route
+
+
+def test_dujiaojing_source_fetches_fixture_until_total(monkeypatch):
+    calls = []
+
+    class FakeResp:
+        def __init__(self, payload):
+            self.payload = payload
+
+        def raise_for_status(self):
+            return None
+
+        def json(self):
+            return self.payload
+
+    def fake_get(url, params, headers, timeout):
+        calls.append((url, params, headers, timeout))
+        if params["page"] == 1:
+            return FakeResp(load_fixture("dujiaojing_page_1.json"))
+        if params["page"] == 2:
+            return FakeResp(load_fixture("dujiaojing_page_2.json"))
+        return FakeResp({"code": 0, "data": {"total": 3, "plans": []}})
+
+    monkeypatch.setattr(dujiaojing.requests, "get", fake_get)
+    source = DujiaojingSource(
+        {
+            "api_url": "https://example.test/plans",
+            "token": "fixture-token",
+            "deploy_url": "https://example.test/deploy?plan_id={plan_id}&machine_id={machine_id}&region={region}",
+            "page_size": 2,
+            "max_pages": 5,
+        }
+    )
+    offers = source.fetch()
+
+    assert [offer.offer_id for offer in offers] == ["101", "102", "103"]
+    assert [call[1]["page"] for call in calls] == [1, 2]
+    assert all(call[2] == {"Authorization": "Bearer fixture-token"} for call in calls)
+    assert offers[0].price is not None
+    assert round(offers[0].price.usd_year, 3) == 0.96
+    assert offers[0].traffic == "500GB BW"
+    assert offers[1].available is False
+    assert offers[1].traffic == "不限流量"
+    assert offers[2].cpu_cores == 2
+    assert offers[2].ram_gb == 2
+    assert offers[2].url == "https://example.test/deploy?plan_id=103&machine_id=us-1&region=us"
+
+
+def test_dujiaojing_source_requires_token(monkeypatch):
+    monkeypatch.delenv("MISSING_TOKEN", raising=False)
+    source = DujiaojingSource({"api_url": "https://example.test/plans", "token_env": "MISSING_TOKEN"})
+    try:
+        source.fetch()
+    except RuntimeError as exc:
+        assert "token missing" in str(exc)
+    else:
+        raise AssertionError("expected missing token error")
 
 
 def test_send_telegram_messages_uses_env(monkeypatch):

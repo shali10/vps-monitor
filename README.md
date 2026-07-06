@@ -194,7 +194,7 @@ sudo systemctl enable --now vps-monitor-v4-czl.timer vps-monitor-v4-dujiaojing.t
 |---|---|---|
 | 代码结构 | A | package 化、source adapter、SQLite 状态、统一 formatter |
 | 文档 | A | README、安装、配置、架构、排错、站点文档齐全 |
-| 测试 | A- | 解析/格式化/发送路径、SQLite diff 生命周期、事件落库和池规则均有单元测试覆盖，后续可补真实 HTTP fixture |
+| 测试 | A | 解析/格式化/发送路径、SQLite diff 生命周期、事件落库、池规则、脱敏 API fixture 驱动的 source fetch 均有覆盖 |
 | CI/CD | A- | GitHub Actions、Dependabot 已接入 |
 | OSS 规范 | A | LICENSE、CHANGELOG、SECURITY、Issue 模板、Release checklist |
 | 安全 | A- | token 环境变量化、敏感文件忽略、make check 扫描 |
@@ -221,7 +221,7 @@ python3 -m vpsmon.cli --config config.example.json --source czl --notify-first-r
 
 ## 版本
 
-当前版本：`v4.3.0`。
+当前版本：`v4.4.0`。
 
 更新记录见 [CHANGELOG.md](CHANGELOG.md)。
 
