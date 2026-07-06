@@ -2,6 +2,19 @@
 
 All notable changes to this project are documented here.
 
+## v4.3.0 - 2026-07-06
+
+### Added
+
+- Added a GitHub-renderable Telegram preview SVG under `assets/telegram-preview.svg` and surfaced it in README.
+- Added SQLite diff lifecycle tests for first-run seeding, explicit first-run notifications, restock detection, price-drop detection, and event persistence.
+- Added pool filtering regression coverage for low-price pool matching and missing-spec rejection.
+
+### Changed
+
+- Updated README maturity scorecard to reflect expanded state/diff test coverage.
+- Bumped package version to `4.3.0`.
+
 ## v4.2.1 - 2026-07-06
 
 ### Fixed

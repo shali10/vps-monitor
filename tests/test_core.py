@@ -1,11 +1,13 @@
 from vpsmon.cli import run_once
-from vpsmon.models import Event, EventType
+from vpsmon.engine.diff import diff_offers
+from vpsmon.models import Event, EventType, Money, VpsOffer
 from vpsmon.notifiers import telegram
 from vpsmon.notifiers.telegram import format_offer, render_events, render_summary, send_telegram_messages, split_blocks
 from vpsmon.rules.filtering import offer_allowed
 from vpsmon.rules.parsing import parse_cpu_cores, parse_ram_gb, parse_usd_year
 from vpsmon.sources.czl import normalize as normalize_czl
 from vpsmon.sources.dujiaojing import normalize as normalize_dujiaojing
+from vpsmon.storage.sqlite import StateStore
 
 
 def test_parse_ram_units():
@@ -182,6 +184,104 @@ def test_render_summary():
     assert len(messages) == 1
     assert "独角鲸云" in messages[0]
     assert "HK Node" in messages[0]
+
+
+
+def _offer(
+    offer_id="plan-1",
+    *,
+    source="czl",
+    available=True,
+    price_raw="$12/年",
+    usd_year=12.0,
+    stock=1,
+):
+    return VpsOffer(
+        source=source,
+        offer_id=offer_id,
+        title="LowEnd KVM",
+        provider="ExampleHost",
+        location="Los Angeles",
+        cpu_cores=1,
+        ram_gb=1,
+        disk="20GB SSD",
+        bandwidth="1TB",
+        route="4837 / CMI",
+        price=Money(raw=price_raw, usd_year=usd_year),
+        available=available,
+        stock=stock,
+        url=f"https://example.test/{offer_id}",
+        raw={"id": offer_id},
+    )
+
+
+def test_diff_first_run_silent_seeds_state(tmp_path):
+    store = StateStore(tmp_path / "state.sqlite3")
+    try:
+        events = diff_offers(store, [_offer()], first_run_silent=True)
+        assert events == []
+        assert store.count_source("czl") == 1
+        saved = store.get("czl", "plan-1")
+        assert saved is not None
+        assert saved["available"] == 1
+        assert saved["price_raw"] == "$12/年"
+    finally:
+        store.close()
+
+
+def test_diff_first_run_can_emit_new_without_commit(tmp_path):
+    store = StateStore(tmp_path / "state.sqlite3")
+    try:
+        events = diff_offers(store, [_offer()], first_run_silent=False, commit=False)
+        assert [event.event_type for event in events] == [EventType.NEW]
+        assert store.count_source("czl") == 0
+    finally:
+        store.close()
+
+
+def test_diff_detects_restock_and_price_drop(tmp_path):
+    store = StateStore(tmp_path / "state.sqlite3")
+    try:
+        store.upsert_many([_offer(available=False, price_raw="$20/年", usd_year=20.0, stock=0)])
+        events = diff_offers(store, [_offer(available=True, price_raw="$10/年", usd_year=10.0, stock=2)])
+        assert [event.event_type for event in events] == [EventType.RESTOCK, EventType.PRICE_DROP]
+        assert events[1].old_price_raw == "$20/年"
+        assert events[1].new_price_raw == "$10/年"
+        saved = store.get("czl", "plan-1")
+        assert saved["available"] == 1
+        assert saved["stock"] == 2
+        assert saved["usd_year"] == 10.0
+    finally:
+        store.close()
+
+
+def test_state_store_records_events_with_payload(tmp_path):
+    store = StateStore(tmp_path / "state.sqlite3")
+    try:
+        offer_id = "plan-2"
+        events = [Event(EventType.NEW, _offer(offer_id))]
+        store.record_events(events)
+        row = store.conn.execute("SELECT * FROM events WHERE source=? AND offer_id=?", ("czl", offer_id)).fetchone()
+        assert row is not None
+        assert row["event_type"] == "new"
+        assert row["title"] == "LowEnd KVM"
+        assert row["url"] == "https://example.test/plan-2"
+        assert '"id": "plan-2"' in row["payload_json"]
+    finally:
+        store.close()
+
+
+def test_filter_pools_match_low_price_and_reject_missing_specs():
+    rules = {
+        "pools": [
+            {"name": "tiny", "ram_min_gb": 0.5, "ram_max_gb": 1.0, "cpu_min_cores": 1, "usd_year_max": 10},
+        ]
+    }
+    assert offer_allowed(_offer(usd_year=9.0, price_raw="$9/年"), rules)
+    assert not offer_allowed(_offer(usd_year=12.0, price_raw="$12/年"), rules)
+    no_cpu = _offer()
+    no_cpu = VpsOffer(**{**no_cpu.__dict__, "cpu_cores": None})
+    assert not offer_allowed(no_cpu, rules)
 
 
 def test_send_telegram_messages_uses_env(monkeypatch):
