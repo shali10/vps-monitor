@@ -9,7 +9,7 @@
 
 当前 v4 版本已经在生产环境使用，核心目标不是“扫全网”，而是稳定盯住少数高价值来源，避免重复推送、脏数据和无意义摘要。
 
-![Telegram notification preview](assets/telegram-preview.svg)
+![Telegram 推送预览](assets/telegram-preview.svg)
 
 ## 目录
 
@@ -221,7 +221,7 @@ python3 -m vpsmon.cli --config config.example.json --source czl --notify-first-r
 
 ## 版本
 
-当前版本：`v4.4.0`。
+当前版本：`v4.4.1`。
 
 更新记录见 [CHANGELOG.md](CHANGELOG.md)。
 

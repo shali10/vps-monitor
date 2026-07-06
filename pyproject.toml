@@ -4,13 +4,13 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "vps-monitor"
-version = "4.4.0"
-description = "Event-driven VPS stock monitor with Telegram notifications."
+version = "4.4.1"
+description = "面向低价 VPS 库存的事件驱动监控工具，支持 Telegram 推送。"
 readme = "README.md"
 requires-python = ">=3.10"
 license = {text = "MIT"}
 authors = [{name = "shali10"}]
-keywords = ["vps", "monitor", "stock", "telegram", "systemd"]
+keywords = ["vps", "monitor", "stock", "telegram", "systemd", "restock-alert", "stock-watcher"]
 classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: System Administrators",

@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1280" height="640" viewBox="0 0 1280 640" role="img" aria-labelledby="title desc">
-  <title id="title">vps-monitor Telegram notification preview</title>
-  <desc id="desc">A sample Telegram stock alert rendered by vps-monitor.</desc>
+  <title id="title">vps-monitor Telegram 推送预览</title>
+  <desc id="desc">vps-monitor 渲染的 Telegram 库存提醒示例。</desc>
   <defs>
     <linearGradient id="bg" x1="0" x2="1" y1="0" y2="1">
       <stop offset="0" stop-color="#f7fafc"/>
@@ -17,19 +17,19 @@
   <circle cx="305" cy="92" r="22" fill="#ffffff" opacity="0.96"/>
   <path d="M296 93l23-12-7 27-6-8-7 7-3-14z" fill="#2aabee"/>
   <text x="342" y="99" font-family="Arial, Helvetica, sans-serif" font-size="24" font-weight="700" fill="#ffffff">vps-monitor</text>
-  <text x="342" y="121" font-family="Arial, Helvetica, sans-serif" font-size="13" fill="#dff5ff">stock alerts via Telegram</text>
+  <text x="342" y="121" font-family="Arial, Helvetica, sans-serif" font-size="13" fill="#dff5ff">Telegram 库存提醒</text>
   <g font-family="Arial, Helvetica, sans-serif">
     <rect x="294" y="168" width="690" height="330" rx="20" fill="#eff7ff" stroke="#d6e6f3"/>
-    <text x="326" y="210" font-size="24" font-weight="700" fill="#17324d">VPS Stock Alert · 2 new events</text>
-    <text x="326" y="252" font-size="20" font-weight="700" fill="#17324d">Package: LET 1GB KVM VPS · Los Angeles</text>
-    <text x="326" y="286" font-size="18" fill="#31506b">Spec: 1vCore / 1GB / 20GB SSD / 1TB</text>
-    <text x="326" y="318" font-size="18" fill="#31506b">Price: $9.99/year · In stock x3</text>
-    <text x="326" y="350" font-size="18" fill="#31506b">Route: 4837 / CMI / CN2</text>
+    <text x="326" y="210" font-size="24" font-weight="700" fill="#17324d">VPS 库存提醒 · 2 条新事件</text>
+    <text x="326" y="252" font-size="20" font-weight="700" fill="#17324d">套餐：LET 1GB KVM VPS · Los Angeles</text>
+    <text x="326" y="286" font-size="18" fill="#31506b">配置：1vCore / 1GB / 20GB SSD / 1TB</text>
+    <text x="326" y="318" font-size="18" fill="#31506b">价格：$9.99/年 · 有货 x3</text>
+    <text x="326" y="350" font-size="18" fill="#31506b">线路：4837 / CMI / CN2</text>
     <rect x="326" y="374" width="144" height="42" rx="21" fill="#2aabee"/>
-    <text x="352" y="401" font-size="17" font-weight="700" fill="#ffffff">Open Deal</text>
+    <text x="356" y="401" font-size="17" font-weight="700" fill="#ffffff">直达购买</text>
     <text x="326" y="458" font-size="16" fill="#64748b">#czl #examplehost #los_angeles</text>
   </g>
   <g font-family="Arial, Helvetica, sans-serif">
-    <text x="270" y="612" font-size="15" fill="#60758a">Normalized source adapters -> SQLite diff -> event formatter -> Telegram</text>
+    <text x="270" y="612" font-size="15" fill="#60758a">来源适配器 -> SQLite 状态对比 -> 事件渲染 -> Telegram 推送</text>
   </g>
 </svg>
