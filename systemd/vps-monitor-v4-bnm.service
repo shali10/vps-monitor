@@ -1,0 +1,12 @@
+[Unit]
+Description=VPS Monitor v4 - BNM/SHLII poll
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+WorkingDirectory=/opt/vps-monitor
+EnvironmentFile=/opt/vps-monitor/.env
+ExecStart=/usr/bin/python3 -m vpsmon.cli --config /opt/vps-monitor/config.json --source bnm --send --max-send-messages 20
+StandardOutput=journal
+StandardError=journal

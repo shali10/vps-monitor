@@ -1,0 +1,11 @@
+[Unit]
+Description=Run VPS Monitor v4 BNM/SHLII poll every 10 minutes
+
+[Timer]
+OnBootSec=5min
+OnUnitActiveSec=10min
+AccuracySec=1min
+Unit=vps-monitor-v4-bnm.service
+
+[Install]
+WantedBy=timers.target

@@ -1,0 +1,11 @@
+[Unit]
+Description=Run PoorVPS navigation watch daily
+
+[Timer]
+OnBootSec=7min
+OnUnitActiveSec=1d
+AccuracySec=10min
+Unit=vps-monitor-v4-poorvps-nav.service
+
+[Install]
+WantedBy=timers.target

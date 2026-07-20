@@ -1,0 +1,12 @@
+[Unit]
+Description=VPS Monitor v4 - PoorVPS navigation watch
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+WorkingDirectory=/opt/vps-monitor
+EnvironmentFile=/opt/vps-monitor/.env
+ExecStart=/usr/bin/python3 /opt/vps-monitor/scripts/poorvps_nav_watch.py --config /opt/vps-monitor/config.json --send
+StandardOutput=journal
+StandardError=journal
