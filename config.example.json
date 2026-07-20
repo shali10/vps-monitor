@@ -16,6 +16,11 @@
       "deploy_url": "https://dash.fuckip.me/deploy?plan_id={plan_id}&machine_id={machine_id}&region={region}",
       "page_size": 200,
       "max_pages": 50
+    },
+    "bnm": {
+      "enabled": true,
+      "url": "https://bnm.uw.to/",
+      "timeout": 20
     }
   },
   "rules": {
@@ -66,6 +71,19 @@
           "usd_year_max": 3.6
         }
       ]
+    },
+    "bnm": {
+      "price_min_usd_year": 1,
+      "price_max_usd_year": 70,
+      "pools": [
+        {
+          "name": "廉价",
+          "ram_min_gb": 0.4,
+          "ram_max_gb": 2.0,
+          "usd_year_min": 0,
+          "usd_year_max": 10
+        }
+      ]
     }
   },
   "notify_policy": {
@@ -78,6 +96,10 @@
       "sort_events": "pool_price"
     },
     "czl": {
+      "limit_events": 20,
+      "sort_events": "pool_price"
+    },
+    "bnm": {
       "limit_events": 20,
       "sort_events": "pool_price"
     }

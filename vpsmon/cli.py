@@ -7,17 +7,18 @@ from vpsmon.config import load_config
 from vpsmon.engine.diff import diff_offers
 from vpsmon.notifiers.telegram import render_events, render_summary, send_telegram_messages
 from vpsmon.rules.filtering import filter_offers, pool_name
-from vpsmon.sources.czl import CzlSource
-from vpsmon.sources.dujiaojing import DujiaojingSource
+import vpsmon.sources  # noqa: F401 — triggers source registration
+from vpsmon.sources import get_source, list_sources
 from vpsmon.storage.sqlite import StateStore
 
 
 def _build_source(name: str, config: dict):
-    if name == "czl":
-        return CzlSource(config)
-    if name == "dujiaojing":
-        return DujiaojingSource(config)
-    raise SystemExit(f"unknown source: {name}")
+    try:
+        return get_source(name, config)
+    except KeyError:
+        raise SystemExit(
+            f"unknown source: {name!r}; available: {list_sources()}"
+        )
 
 
 def run_once(

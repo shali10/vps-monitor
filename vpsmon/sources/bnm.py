@@ -42,6 +42,7 @@ def _price(raw: str) -> Money | None:
 
 
 class BnmSource:
+    SOURCE_NAME = "bnm"
     def __init__(self, config: dict):
         self.url = config.get('url') or config.get('api_url') or 'https://bnm.uw.to/'
         self.timeout = int(config.get('timeout', 20))
@@ -98,3 +99,6 @@ class BnmSource:
                 },
             ))
         return offers
+
+
+register("bnm", BnmSource)

@@ -134,6 +134,7 @@ def normalize(plan: dict, deploy_url: str) -> VpsOffer:
 
 
 class DujiaojingSource:
+    SOURCE_NAME = "dujiaojing"
     def __init__(self, config: dict):
         self.api_url = config["api_url"]
         self.token = config.get("token") or os.environ.get(config.get("token_env", ""), "")
@@ -166,3 +167,6 @@ class DujiaojingSource:
             if total and len(items) >= int(total):
                 break
         return [normalize(item, self.deploy_url) for item in items]
+
+
+register("dujiaojing", DujiaojingSource)

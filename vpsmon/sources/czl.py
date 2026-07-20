@@ -110,6 +110,7 @@ def normalize(item: dict, deploy_url: str) -> VpsOffer:
 
 
 class CzlSource:
+    SOURCE_NAME = "czl"
     def __init__(self, config: dict):
         self.api_url = config["api_url"]
         self.page_size = int(config.get("page_size", 12))
@@ -149,3 +150,6 @@ class CzlSource:
                 raw_items.extend([row for row in rows if isinstance(row, dict)])
 
         return [normalize(item, self.deploy_url) for item in raw_items]
+
+
+register("czl", CzlSource)
