@@ -54,6 +54,14 @@
 
 ## 快速开始
 
+一键安装（推荐）：
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/shali10/vps-monitor/main/install.sh | bash
+```
+
+或手动安装：
+
 ```bash
 git clone https://github.com/shali10/vps-monitor.git
 cd vps-monitor
