@@ -3,10 +3,13 @@ from __future__ import annotations
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import hashlib
 import re
+from typing import Any
+from urllib.parse import urljoin
 
 import requests
 
 from vpsmon.models import Money, VpsOffer
+from vpsmon.sources import register
 from vpsmon.rules.parsing import parse_cpu_cores, parse_ram_gb, parse_usd_year
 
 CN_ROUTE_KEYWORDS = ["优化", "CN2", "GIA", "CMI", "9929", "4837", "精品", "三网", "BGP", "回国", "直连", "低延迟", "软银", "AS9929"]

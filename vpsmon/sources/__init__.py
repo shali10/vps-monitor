@@ -14,6 +14,13 @@ def register(name: str, cls: type) -> None:
     _registry[name] = cls
 
 
+# Import each source module so its register() call fires at import time.
+# This is what makes the registry populated when cli.py does `import vpsmon.sources`.
+from vpsmon.sources import bnm  # noqa: F401, E402
+from vpsmon.sources import czl  # noqa: F401, E402
+from vpsmon.sources import dujiaojing  # noqa: F401, E402
+
+
 def get_source(name: str, config: dict) -> Any:
     """Build a source instance by name, or raise KeyError."""
     cls = _registry.get(name)

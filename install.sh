@@ -42,9 +42,6 @@ python3 -m venv "$VENV_DIR"
 source "$VENV_DIR/bin/activate"
 pip install -q -U pip setuptools
 pip install -q -r "$INSTALL_DIR/requirements.txt"
-
-# Install bs4 (needed by bnm source)
-pip install -q beautifulsoup4
 info "Dependencies installed"
 
 # ── config ─────────────────────────────────────

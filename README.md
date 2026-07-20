@@ -42,7 +42,7 @@
 
 | 能力 | 说明 |
 |---|---|
-| 多来源适配 | 内置 `dujiaojing`、`czl` 两个来源 |
+| 多来源适配 | 内置 `dujiaojing`、`czl`、`bnm` 三个来源 |
 | 标准模型 | 不同接口统一为 `Offer / Price / Event` |
 | 规则筛选 | 支持价格、内存、CPU、关键词、套餐池规则 |
 | SQLite 状态 | 记录历史库存，避免每轮重复推送 |
@@ -166,6 +166,7 @@ sudo systemctl enable --now vps-monitor-v4-czl.timer vps-monitor-v4-dujiaojing.t
 |---|---|---|---|
 | `czl` | 无 token，公开接口 | [docs/sites/czl.md](docs/sites/czl.md) | 低价 VPS 公开库存筛选 |
 | `dujiaojing` | `SITE_A_TOKEN` | [docs/sites/dujiaojing.md](docs/sites/dujiaojing.md) | 独角鲸云库存与补货提醒 |
+| `bnm` | 无 token，公开页面 | [docs/sites/bnm.md](docs/sites/bnm.md) | 倍诺牧云库存监控 |
 
 ## 目录结构
 
@@ -190,7 +191,7 @@ sudo systemctl enable --now vps-monitor-v4-czl.timer vps-monitor-v4-dujiaojing.t
 |---|---|
 | 1 | 在 `vpsmon/sources/<name>.py` 实现 fetch 和 normalize |
 | 2 | 把原始套餐转换成 `Offer` |
-| 3 | 在 `vpsmon/cli.py` 的 `_build_source()` 注册来源名 |
+| 3 | 在 `vpsmon/sources/__init__.py` 末尾导入新模块（自动注册） |
 | 4 | 在 `config.example.json` 添加配置模板和规则 |
 | 5 | 给解析、筛选、格式化补测试 |
 | 6 | 在 `docs/sites/` 补来源文档 |

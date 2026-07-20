@@ -5,6 +5,7 @@ import os
 import requests
 
 from vpsmon.models import Money, VpsOffer
+from vpsmon.sources import register
 
 ROUTE_CHECKS = [
     ("三网", "三网"),

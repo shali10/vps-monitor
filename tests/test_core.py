@@ -328,7 +328,11 @@ def test_czl_source_fetches_paginated_fixture(monkeypatch):
     )
     offers = source.fetch()
 
-    assert [offer.offer_id for offer in offers] == ["czl-fixture-1", "czl-fixture-2", "czl-fixture-3"]
+    assert [offer.offer_id for offer in offers] == [
+        "44b274448870488e",
+        "4c76534073bef9c5",
+        "ec47efd414b6db99",
+    ]
     assert calls == [
         ("https://example.test/czl", {"page": 1, "pageSize": 2}, 15),
         ("https://example.test/czl", {"page": 2, "pageSize": 2}, 15),

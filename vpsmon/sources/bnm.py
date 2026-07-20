@@ -7,6 +7,7 @@ import requests
 
 from vpsmon.models import Money, VpsOffer
 from vpsmon.rules.parsing import parse_ram_gb, parse_usd_year
+from vpsmon.sources import register
 
 
 def _clean(value: object) -> str:
