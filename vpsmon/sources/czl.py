@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from concurrent.futures import ThreadPoolExecutor, as_completed
+import hashlib
 import re
 
 import requests
@@ -10,9 +11,30 @@ from vpsmon.rules.parsing import parse_cpu_cores, parse_ram_gb, parse_usd_year
 
 CN_ROUTE_KEYWORDS = ["优化", "CN2", "GIA", "CMI", "9929", "4837", "精品", "三网", "BGP", "回国", "直连", "低延迟", "软银", "AS9929"]
 
+# czl.net sometimes marks provider offers available even when the final WHMCS cart is out of stock.
+# ColoCrossing is a confirmed false-positive source (2026-07-07). Keep rows for history, but do not render as available.
+UNRELIABLE_STOCK_PROVIDERS = {"colocrossing"}
 
-def _offer_id(item: dict) -> str:
-    return str(item.get("id") or item.get("item_id") or item.get("uuid") or item.get("title") or "unknown")
+
+def _stable_offer_id(item: dict) -> str:
+    """Generate a stable unique key based on offer attributes, not the volatile API id.
+    
+    czl.net assigns a new sequential id every time a plan is re-listed, so using
+    id as the key causes every fetch to create duplicate "new" events.
+    Instead, hash the stable attributes: provider + title + location + cpu + ram + disk + bandwidth + price.
+    """
+    parts = [
+        str(item.get("provider") or ""),
+        str(item.get("title") or item.get("name") or ""),
+        str(item.get("location") or ""),
+        str(item.get("cpu") or ""),
+        str(item.get("ram") or item.get("memory") or ""),
+        str(item.get("disk") or ""),
+        str(item.get("bandwidth") or item.get("bw") or ""),
+        str(item.get("price") or ""),
+    ]
+    raw = "|".join(parts)
+    return hashlib.sha256(raw.encode("utf-8")).hexdigest()[:16]
 
 
 def _available(item: dict) -> bool:
@@ -63,11 +85,14 @@ def _clean_text(value: object) -> str:
 def normalize(item: dict, deploy_url: str) -> VpsOffer:
     raw_price = str(item.get("price") or "")
     usd_year = parse_usd_year(raw_price)
-    offer_id = _offer_id(item)
-    url = deploy_url.format(item_id=offer_id)
+    stable_id = _stable_offer_id(item)
+    raw_id = str(item.get("id") or item.get("item_id") or "")
+    # Use raw_id in URL if available, otherwise use stable_id
+    url_id = raw_id if raw_id else stable_id
+    url = deploy_url.format(item_id=url_id)
     return VpsOffer(
         source="czl",
-        offer_id=offer_id,
+        offer_id=stable_id,
         title=_clean_text(item.get("title") or item.get("name") or "未知套餐"),
         provider=_clean_text(item.get("provider")),
         location=_clean_text(item.get("location")),
@@ -77,7 +102,7 @@ def normalize(item: dict, deploy_url: str) -> VpsOffer:
         bandwidth=_clean_text(item.get("bandwidth") or item.get("bw")),
         route=_route(item),
         price=Money(raw=raw_price, usd_year=usd_year) if usd_year is not None else None,
-        available=_available(item),
+        available=_available(item) and _clean_text(item.get("provider")).lower() not in UNRELIABLE_STOCK_PROVIDERS,
         stock=_stock(item),
         url=url,
         raw=item,
