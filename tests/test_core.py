@@ -307,8 +307,8 @@ def test_czl_source_fetches_paginated_fixture(monkeypatch):
         def json(self):
             return self.payload
 
-    def fake_get(url, params, timeout):
-        calls.append((url, params, timeout))
+    def fake_get(url, params, timeout, headers=None):
+        calls.append((url, params, timeout, headers))
         page = params["page"]
         if page == 1:
             return FakeResp(load_fixture("czl_page_1.json"))
@@ -334,8 +334,18 @@ def test_czl_source_fetches_paginated_fixture(monkeypatch):
         "ec47efd414b6db99",
     ]
     assert calls == [
-        ("https://example.test/czl", {"page": 1, "pageSize": 2}, 15),
-        ("https://example.test/czl", {"page": 2, "pageSize": 2}, 15),
+        (
+            "https://example.test/czl",
+            {"page": 1, "pageSize": 2},
+            15,
+            czl.DEFAULT_HEADERS,
+        ),
+        (
+            "https://example.test/czl",
+            {"page": 2, "pageSize": 2},
+            15,
+            czl.DEFAULT_HEADERS,
+        ),
     ]
     assert offers[0].url == "https://example.test/buy/czl-fixture-1"
     assert offers[0].stock == 3
