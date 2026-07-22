@@ -6,7 +6,7 @@
       "api_url": "https://vps-monitor.czl.net/api/public/filter",
       "page_size": 12,
       "max_pages": 100,
-      "max_workers": 8,
+      "max_workers": 4,
       "deploy_url": "https://vps-monitor.czl.net/buy/{item_id}"
     },
     "dujiaojing": {

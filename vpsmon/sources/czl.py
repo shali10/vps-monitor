@@ -18,6 +18,12 @@ CN_ROUTE_KEYWORDS = ["优化", "CN2", "GIA", "CMI", "9929", "4837", "精品", "�
 # ColoCrossing is a confirmed false-positive source (2026-07-07). Keep rows for history, but do not render as available.
 UNRELIABLE_STOCK_PROVIDERS = {"colocrossing"}
 
+DEFAULT_HEADERS = {
+    # Edge/WAF rejects empty UA, python-requests UA, and custom bot-like UA strings.
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36",
+    "Accept": "application/json,text/plain,*/*",
+}
+
 
 def _stable_offer_id(item: dict) -> str:
     """Generate a stable unique key based on offer attributes, not the volatile API id.
@@ -118,7 +124,7 @@ class CzlSource:
         self.api_url = config["api_url"]
         self.page_size = int(config.get("page_size", 12))
         self.max_pages = int(config.get("max_pages", 100))
-        self.max_workers = int(config.get("max_workers", 8))
+        self.max_workers = int(config.get("max_workers", 4))
         self.deploy_url = config.get("deploy_url", "https://vps-monitor.czl.net/buy/{item_id}")
 
     def _fetch_page(self, page: int) -> tuple[int, dict | list | None]:
@@ -127,6 +133,7 @@ class CzlSource:
                 self.api_url,
                 params={"page": page, "pageSize": self.page_size},
                 timeout=15,
+                headers=DEFAULT_HEADERS,
             )
             resp.raise_for_status()
             return page, resp.json()
